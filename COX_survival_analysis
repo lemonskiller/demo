@@ -1,0 +1,27 @@
+# In my opinion, COX analysis is setting up a model, whose independent variables are the factors I am interested in, dependent variables are the time and status.
+library("survival")
+library("survminer")
+data("lung")
+head(lung)
+fmla1 <- as.formula(Surv(time,status)~.) # time and status with other factors
+mycox <- coxph(fmla1,data=lung)
+summary(mycox)
+risk_score<-predict(mycox,type="risk",newdata=lung) # I don't know why there are a lot of NA occured. Luckily, this doesn't happend in my own data.
+df_risk<-cbind(lung[,2:3],risk_score)
+df_risk_omit_na=na.omit(df_risk)
+
+risk_level<-as.factor(ifelse(df_risk_omit_na$risk_score>median(df_risk_omit_na$risk_score),"High","Low"))
+
+df_risk_final<-cbind(df_risk_omit_na,risk_level)
+fit <- survfit(Surv(time/365,status)~risk_level,data=df_risk_final)
+
+ggsurvplot(fit,pval = TRUE,conf.int = TRUE,surv.median.line = "hv",
+           xlab='Time in Years',legend.labs=c("High Risk","Low Risk"),
+           pval.coord=c(0.5,0.15),
+           legend=c(0.8,0.8),
+           font.legend=c("14"), # legend  
+           font.x=c("16"),
+           font.y=c("16"),
+           risk.table = TRUE,
+           ncensor.plot=TRUE
+)
